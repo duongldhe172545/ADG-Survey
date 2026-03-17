@@ -1,0 +1,28 @@
+# ── Secrets ──
+.env
+*.json
+!package.json
+!package-lock.json
+!tsconfig*.json
+!eslint.config.js
+
+# ── Excel temp files ──
+~$*
+
+# ── Large files ──
+*.xlsx
+*.png
+
+# ── Python ──
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# ── Node ──
+node_modules/
+dist/
+
+# ── IDE ──
+.vscode/
+.idea/
