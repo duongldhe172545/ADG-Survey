@@ -23,15 +23,28 @@ SCOPES = [
 
 def _get_client() -> Optional[gspread.Client]:
     """Get authenticated gspread client. Returns None if not configured."""
+    # Option 1: JSON string from env var (Railway)
+    sa_json = settings.GDRIVE_SERVICE_ACCOUNT_JSON
+    if sa_json:
+        try:
+            import json
+            info = json.loads(sa_json)
+            creds = Credentials.from_service_account_info(info, scopes=SCOPES)
+            return gspread.authorize(creds)
+        except Exception as e:
+            logger.error(f"Failed to auth gspread from JSON env: {e}")
+            return None
+
+    # Option 2: JSON file path (local dev)
     sa_file = settings.GDRIVE_SERVICE_ACCOUNT_FILE
     if not sa_file:
-        logger.debug("GDRIVE_SERVICE_ACCOUNT_FILE not set, skipping Sheets")
+        logger.debug("No service account configured, skipping Sheets")
         return None
     try:
         creds = Credentials.from_service_account_file(sa_file, scopes=SCOPES)
         return gspread.authorize(creds)
     except Exception as e:
-        logger.error(f"Failed to auth gspread: {e}")
+        logger.error(f"Failed to auth gspread from file: {e}")
         return None
 
 
