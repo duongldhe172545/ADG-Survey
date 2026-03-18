@@ -23,6 +23,8 @@ export default function UsersPage() {
   const [newRole, setNewRole] = useState('surveyor');
   const [adding, setAdding] = useState(false);
   const [error, setError] = useState('');
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editName, setEditName] = useState('');
 
   const fetchUsers = useCallback(async () => {
     try {
@@ -74,6 +76,20 @@ export default function UsersPage() {
       await fetchUsers();
     } catch {
       setError('Lỗi cập nhật role');
+    }
+  };
+
+  const handleSaveName = async (user: User) => {
+    if (!editName.trim() || editName.trim() === user.name) {
+      setEditingId(null);
+      return;
+    }
+    try {
+      await usersApi.update(user.id, { name: editName.trim() });
+      setEditingId(null);
+      await fetchUsers();
+    } catch {
+      setError('Lỗi cập nhật tên');
     }
   };
 
@@ -203,7 +219,27 @@ export default function UsersPage() {
                         {u.name?.charAt(0)?.toUpperCase() || '?'}
                       </div>
                       <div>
-                        <p className="text-sm font-medium text-[var(--color-text)]">{u.name}</p>
+                        {editingId === u.id ? (
+                          <input
+                            autoFocus
+                            value={editName}
+                            onChange={(e) => setEditName(e.target.value)}
+                            onBlur={() => handleSaveName(u)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') handleSaveName(u);
+                              if (e.key === 'Escape') setEditingId(null);
+                            }}
+                            className="text-sm font-medium px-2 py-0.5 border border-blue-400 rounded-lg outline-none focus:ring-2 focus:ring-blue-500/20 w-full"
+                          />
+                        ) : (
+                          <p
+                            className="text-sm font-medium text-[var(--color-text)] cursor-pointer hover:text-blue-600 transition-colors"
+                            title="Click để sửa tên"
+                            onClick={() => { setEditingId(u.id); setEditName(u.name); }}
+                          >
+                            {u.name}
+                          </p>
+                        )}
                         <p className="text-xs text-[var(--color-text-muted)]">{u.email}</p>
                       </div>
                     </div>

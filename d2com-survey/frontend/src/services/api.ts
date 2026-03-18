@@ -97,7 +97,11 @@ async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> 
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: 'Lỗi hệ thống' }));
-    throw new Error(err.detail || `HTTP ${res.status}`);
+    // Pydantic validation returns detail as array of objects
+    const detail = Array.isArray(err.detail)
+      ? err.detail.map((e: { msg?: string }) => e.msg || 'Lỗi validation').join(', ')
+      : err.detail || `HTTP ${res.status}`;
+    throw new Error(detail);
   }
 
   return res.json();
