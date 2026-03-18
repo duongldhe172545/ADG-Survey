@@ -31,6 +31,7 @@ COPY alembic.ini .
 COPY frontend/ ./frontend/
 RUN cd frontend && npm install --legacy-peer-deps && npm run build
 
+ENV PYTHONPATH=/app
 ENV PORT=8000
 EXPOSE 8000
 
