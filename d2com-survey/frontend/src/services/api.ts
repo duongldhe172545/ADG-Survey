@@ -176,6 +176,11 @@ export const surveysApi = {
       method: 'POST',
       body: JSON.stringify({ pain_cluster: painCluster }),
     }),
+
+  delete: (id: number) =>
+    apiFetch<{ message: string }>(`/surveys/${id}`, {
+      method: 'DELETE',
+    }),
 };
 
 // ── Dashboard API ──

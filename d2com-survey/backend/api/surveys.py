@@ -27,6 +27,42 @@ from backend.middleware.auth_guard import get_current_user
 router = APIRouter(prefix="/surveys", tags=["surveys"])
 
 
+# ── Delete ──
+
+@router.delete("/{survey_id}", status_code=200)
+async def delete_survey(
+    survey_id: int,
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(get_current_user),
+):
+    """Delete a survey and its responses."""
+    survey = (await db.execute(
+        select(Survey).where(Survey.id == survey_id)
+    )).scalar_one_or_none()
+    if not survey:
+        raise HTTPException(status_code=404, detail="Survey không tồn tại")
+
+    # Delete responses first
+    await db.execute(
+        Response.__table__.delete().where(Response.survey_id == survey_id)
+    )
+    # Delete survey
+    customer_id = survey.customer_id
+    await db.delete(survey)
+    # Delete customer if no other surveys reference it
+    other = (await db.execute(
+        select(func.count()).select_from(Survey).where(Survey.customer_id == customer_id)
+    )).scalar()
+    if other == 0:
+        customer = (await db.execute(
+            select(Customer).where(Customer.id == customer_id)
+        )).scalar_one_or_none()
+        if customer:
+            await db.delete(customer)
+
+    return {"message": "Đã xóa khảo sát"}
+
+
 # ── Create ──
 
 @router.post("/", response_model=SurveyOut, status_code=201)

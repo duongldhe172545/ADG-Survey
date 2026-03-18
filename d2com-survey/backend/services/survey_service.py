@@ -14,13 +14,24 @@ from backend.schemas import SurveyOut
 
 
 async def generate_resp_id(db: AsyncSession, customer_type: FormType) -> str:
-    """Generate next resp_id: DL-001, DL-002... or TH-001, TH-002..."""
+    """Generate next resp_id: DL-001, DL-002... or TH-001, TH-002...
+    Uses MAX of existing numbers to avoid duplicates after deletions."""
     prefix = "DL" if customer_type == FormType.dealer else "TH"
+    # Get all existing resp_ids for this type
     result = await db.execute(
-        select(func.count()).select_from(Customer).where(Customer.type == customer_type)
+        select(Customer.resp_id).where(Customer.type == customer_type)
     )
-    count = result.scalar() or 0
-    return f"{prefix}-{count + 1:03d}"
+    existing = [r[0] for r in result.all()]
+    # Extract max number
+    max_num = 0
+    for rid in existing:
+        try:
+            num = int(rid.split("-")[1])
+            if num > max_num:
+                max_num = num
+        except (IndexError, ValueError):
+            pass
+    return f"{prefix}-{max_num + 1:03d}"
 
 
 async def build_survey_out(db: AsyncSession, survey: Survey) -> SurveyOut:

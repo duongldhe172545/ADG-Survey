@@ -6,7 +6,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Search, PlusCircle, ChevronRight, Loader2, ClipboardList,
-  Clock
+  Clock, Trash2
 } from 'lucide-react';
 import { surveysApi, type SurveyItem } from '../services/api';
 
@@ -178,6 +178,20 @@ export default function SurveyListPage() {
                   <span className={`badge ${STATUS_CONFIG[s.status]?.badge || 'badge-draft'}`}>
                     {STATUS_CONFIG[s.status]?.label || s.status}
                   </span>
+
+                  {/* Delete */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (confirm(`Xóa khảo sát ${s.customer_resp_id}?`)) {
+                        surveysApi.delete(s.id).then(fetchSurveys).catch((err) => setError(err.message));
+                      }
+                    }}
+                    className="p-2 rounded-lg hover:bg-red-50 text-gray-300 hover:text-red-500 transition-colors"
+                    title="Xóa khảo sát"
+                  >
+                    <Trash2 size={16} />
+                  </button>
 
                   <ChevronRight size={16} className="text-gray-300 group-hover:text-blue-500 transition-colors" />
                 </div>
