@@ -11,6 +11,7 @@ import DashboardPage from './pages/DashboardPage';
 import SurveyListPage from './pages/SurveyListPage';
 import SurveyNewPage from './pages/SurveyNewPage';
 import SurveyFormPage from './pages/SurveyFormPage';
+import UsersPage from './pages/UsersPage';
 
 // Google Client ID from env (injected by Vite)
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
@@ -55,6 +56,7 @@ export default function App() {
               <Route path="/surveys" element={<SurveyListPage />} />
               <Route path="/surveys/new" element={<SurveyNewPage />} />
               <Route path="/surveys/:id" element={<SurveyFormPage />} />
+              <Route path="/settings/users" element={<UsersPage />} />
             </Route>
 
             {/* Fallback */}

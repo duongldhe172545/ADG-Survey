@@ -4,7 +4,7 @@
  */
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import {
-  LayoutDashboard, ClipboardList, PlusCircle, Users, Settings, LogOut,
+  LayoutDashboard, ClipboardList, PlusCircle, Users, LogOut,
   ChevronRight
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -13,11 +13,7 @@ const NAV_ITEMS = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/surveys', icon: ClipboardList, label: 'Khảo sát' },
   { to: '/surveys/new', icon: PlusCircle, label: 'Tạo mới' },
-];
-
-const ADMIN_ITEMS = [
   { to: '/settings/users', icon: Users, label: 'Người dùng' },
-  { to: '/settings', icon: Settings, label: 'Cài đặt' },
 ];
 
 export default function Layout() {
@@ -68,30 +64,6 @@ export default function Layout() {
               {item.label}
             </NavLink>
           ))}
-
-          {user?.role === 'admin' && (
-            <>
-              <p className="text-[10px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider px-3 mt-5 mb-2">
-                Quản trị
-              </p>
-              {ADMIN_ITEMS.map((item) => (
-                <NavLink
-                  key={item.to}
-                  to={item.to}
-                  className={({ isActive }) =>
-                    `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${
-                      isActive
-                        ? 'bg-blue-50 text-blue-700'
-                        : 'text-[var(--color-text-muted)] hover:bg-gray-50 hover:text-[var(--color-text)]'
-                    }`
-                  }
-                >
-                  <item.icon size={18} />
-                  {item.label}
-                </NavLink>
-              ))}
-            </>
-          )}
         </nav>
 
         {/* User info + Logout */}

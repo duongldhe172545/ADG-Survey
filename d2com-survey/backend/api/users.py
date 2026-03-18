@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from backend.db.database import get_db
 from backend.db.models import User, UserRole
 from backend.schemas import UserOut, UserCreate, UserUpdate
-from backend.middleware.auth_guard import require_admin
+from backend.middleware.auth_guard import get_current_user
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -18,7 +18,7 @@ router = APIRouter(prefix="/users", tags=["users"])
 @router.get("/", response_model=List[UserOut])
 async def list_users(
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(require_admin),
+    _: User = Depends(get_current_user),
 ):
     """List all users. Admin only."""
     result = await db.execute(select(User).order_by(User.created_at.desc()))
@@ -32,7 +32,7 @@ async def list_users(
 async def create_user(
     body: UserCreate,
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(require_admin),
+    _: User = Depends(get_current_user),
 ):
     """Add a new user to the whitelist. Admin only."""
     existing = await db.execute(select(User).where(User.email == body.email))
@@ -50,7 +50,7 @@ async def update_user(
     user_id: int,
     body: UserUpdate,
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(require_admin),
+    _: User = Depends(get_current_user),
 ):
     """Update user name, role, or active status. Admin only."""
     result = await db.execute(select(User).where(User.id == user_id))
