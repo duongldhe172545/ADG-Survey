@@ -29,6 +29,8 @@ COPY alembic.ini .
 
 # Copy and build frontend
 COPY frontend/ ./frontend/
+ARG VITE_GOOGLE_CLIENT_ID=571791954536-btfi3vccrc59q2svf6cj9lo3kiuosbid.apps.googleusercontent.com
+ENV VITE_GOOGLE_CLIENT_ID=$VITE_GOOGLE_CLIENT_ID
 RUN cd frontend && npm install --legacy-peer-deps && npm run build
 
 ENV PYTHONPATH=/app
