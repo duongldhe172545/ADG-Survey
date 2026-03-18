@@ -135,51 +135,35 @@ export default function SurveyListPage() {
               className="bg-white rounded-xl border border-[var(--color-border)] p-4 hover:shadow-md hover:border-blue-200 transition-all cursor-pointer group animate-slideIn"
               style={{ animationDelay: `${i * 30}ms` }}
             >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4 min-w-0">
-                  {/* Resp ID badge */}
-                  <div className={`px-2.5 py-1 rounded-lg text-xs font-bold shrink-0 ${
-                    s.customer_type === 'dealer'
-                      ? 'bg-blue-50 text-blue-700'
-                      : 'bg-violet-50 text-violet-700'
-                  }`}>
-                    {s.customer_resp_id}
-                  </div>
-
-                  {/* Info */}
-                  <div className="min-w-0">
-                    <p className="font-medium truncate">
-                      {s.customer_name || <span className="text-[var(--color-text-muted)] italic">Chưa có tên</span>}
-                    </p>
-                    <div className="flex items-center gap-3 mt-1 text-xs text-[var(--color-text-muted)]">
-                      <span>{s.form_name} {s.form_version}</span>
-                      <span>•</span>
-                      <span className="flex items-center gap-1">
-                        <Clock size={12} />
-                        {new Date(s.updated_at).toLocaleDateString('vi-VN')}
-                      </span>
-                    </div>
-                  </div>
+              {/* Top row: ID + Name */}
+              <div className="flex items-center gap-3 mb-2">
+                <div className={`px-2.5 py-1 rounded-lg text-xs font-bold shrink-0 ${
+                  s.customer_type === 'dealer'
+                    ? 'bg-blue-50 text-blue-700'
+                    : 'bg-violet-50 text-violet-700'
+                }`}>
+                  {s.customer_resp_id}
                 </div>
+                <p className="font-medium truncate flex-1">
+                  {s.customer_name || <span className="text-[var(--color-text-muted)] italic">Chưa có tên</span>}
+                </p>
+                <span className={`badge shrink-0 ${STATUS_CONFIG[s.status]?.badge || 'badge-draft'}`}>
+                  {STATUS_CONFIG[s.status]?.label || s.status}
+                </span>
+              </div>
 
-                <div className="flex items-center gap-4 shrink-0">
-                  {/* Progress */}
-                  <div className="text-right">
-                    <p className="text-sm font-semibold">{s.answered_count}/{s.total_questions}</p>
-                    <div className="w-20 h-1.5 bg-gray-100 rounded-full mt-1 overflow-hidden">
-                      <div
-                        className="h-full bg-blue-500 rounded-full transition-all"
-                        style={{ width: `${s.total_questions ? (s.answered_count / s.total_questions) * 100 : 0}%` }}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Status */}
-                  <span className={`badge ${STATUS_CONFIG[s.status]?.badge || 'badge-draft'}`}>
-                    {STATUS_CONFIG[s.status]?.label || s.status}
+              {/* Bottom row: meta + progress + actions */}
+              <div className="flex items-center justify-between text-xs text-[var(--color-text-muted)]">
+                <div className="flex items-center gap-2">
+                  <span>{s.form_name} {s.form_version}</span>
+                  <span>•</span>
+                  <span className="flex items-center gap-1">
+                    <Clock size={12} />
+                    {new Date(s.updated_at).toLocaleDateString('vi-VN')}
                   </span>
-
-                  {/* Delete */}
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="font-semibold text-[var(--color-text)]">{s.answered_count}/{s.total_questions}</span>
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -187,13 +171,12 @@ export default function SurveyListPage() {
                         surveysApi.delete(s.id).then(fetchSurveys).catch((err) => setError(err.message));
                       }
                     }}
-                    className="p-2 rounded-lg hover:bg-red-50 text-gray-300 hover:text-red-500 transition-colors"
+                    className="p-1.5 rounded-lg hover:bg-red-50 text-gray-300 hover:text-red-500 transition-colors"
                     title="Xóa khảo sát"
                   >
-                    <Trash2 size={16} />
+                    <Trash2 size={14} />
                   </button>
-
-                  <ChevronRight size={16} className="text-gray-300 group-hover:text-blue-500 transition-colors" />
+                  <ChevronRight size={14} className="text-gray-300 group-hover:text-blue-500 transition-colors hidden sm:block" />
                 </div>
               </div>
             </div>

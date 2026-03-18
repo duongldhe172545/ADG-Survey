@@ -1,11 +1,12 @@
 /**
  * D2Com Survey — App Layout
- * Sidebar + Header + Main content area.
+ * Responsive: sidebar on desktop, bottom nav + slide-out menu on mobile.
  */
+import { useState } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, ClipboardList, PlusCircle, Users, LogOut,
-  ChevronRight
+  ChevronRight, Menu, X
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -19,18 +20,34 @@ const NAV_ITEMS = [
 export default function Layout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const handleLogout = () => {
     logout();
     navigate('/login');
   };
 
+  const closeSidebar = () => setSidebarOpen(false);
+
   return (
     <div className="min-h-screen flex bg-[var(--color-bg)]">
-      {/* Sidebar */}
-      <aside className="w-64 bg-white border-r border-[var(--color-border)] flex flex-col shrink-0">
+      {/* Mobile overlay */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/40 z-40 md:hidden"
+          onClick={closeSidebar}
+        />
+      )}
+
+      {/* Sidebar — hidden on mobile, slide-out when open */}
+      <aside className={`
+        fixed md:static inset-y-0 left-0 z-50
+        w-64 bg-white border-r border-[var(--color-border)] flex flex-col shrink-0
+        transform transition-transform duration-200 ease-out
+        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+      `}>
         {/* Logo */}
-        <div className="h-16 flex items-center px-5 border-b border-[var(--color-border)]">
+        <div className="h-14 flex items-center justify-between px-4 border-b border-[var(--color-border)]">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-600 to-violet-600 flex items-center justify-center">
               <span className="text-white text-sm font-bold">D2</span>
@@ -40,6 +57,13 @@ export default function Layout() {
               <p className="text-[10px] text-[var(--color-text-muted)]">Hệ thống khảo sát</p>
             </div>
           </div>
+          {/* Close button (mobile only) */}
+          <button
+            onClick={closeSidebar}
+            className="md:hidden p-1.5 rounded-lg hover:bg-gray-100 text-[var(--color-text-muted)]"
+          >
+            <X size={18} />
+          </button>
         </div>
 
         {/* Navigation */}
@@ -52,6 +76,7 @@ export default function Layout() {
               key={item.to}
               to={item.to}
               end={item.to === '/'}
+              onClick={closeSidebar}
               className={({ isActive }) =>
                 `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${
                   isActive
@@ -90,11 +115,20 @@ export default function Layout() {
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Header */}
-        <header className="h-16 bg-white border-b border-[var(--color-border)] flex items-center justify-between px-6 shrink-0">
-          <div className="flex items-center gap-2 text-sm text-[var(--color-text-muted)]">
-            <span>D2Com</span>
-            <ChevronRight size={14} />
-            <span className="text-[var(--color-text)] font-medium">Survey</span>
+        <header className="h-14 bg-white border-b border-[var(--color-border)] flex items-center justify-between px-4 md:px-6 shrink-0">
+          <div className="flex items-center gap-3">
+            {/* Hamburger (mobile only) */}
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="md:hidden p-1.5 rounded-lg hover:bg-gray-100 text-[var(--color-text-muted)]"
+            >
+              <Menu size={20} />
+            </button>
+            <div className="flex items-center gap-2 text-sm text-[var(--color-text-muted)]">
+              <span>D2Com</span>
+              <ChevronRight size={14} />
+              <span className="text-[var(--color-text)] font-medium">Survey</span>
+            </div>
           </div>
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse-dot" />
@@ -103,7 +137,7 @@ export default function Layout() {
         </header>
 
         {/* Page content */}
-        <main className="flex-1 overflow-auto p-6">
+        <main className="flex-1 overflow-auto p-4 md:p-6">
           <Outlet />
         </main>
       </div>

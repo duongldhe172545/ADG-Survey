@@ -4,7 +4,7 @@ Handles creating sheets and appending survey rows on submit.
 Uses gspread + service account authentication.
 """
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import Optional
 
 import gspread
@@ -97,9 +97,9 @@ def append_survey_row(
     try:
         spreadsheet = client.open_by_key(sheet_id)
         worksheet = spreadsheet.sheet1
-
         # Build row: [Timestamp, Customer, Surveyor, answer1, answer2, ...]
-        now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+        vn_tz = timezone(timedelta(hours=7))
+        now = datetime.now(vn_tz).strftime("%Y-%m-%d %H:%M:%S")
         row = [now, customer_name, surveyor_name]
         for qid in q_ids:
             row.append(answers.get(qid, ""))
