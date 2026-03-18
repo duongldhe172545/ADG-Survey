@@ -6,7 +6,7 @@ import { useState } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, ClipboardList, PlusCircle, Users, LogOut,
-  ChevronRight, Menu, X
+  ChevronRight, Menu, X, BarChart3
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -14,6 +14,7 @@ const NAV_ITEMS = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/surveys', icon: ClipboardList, label: 'Khảo sát' },
   { to: '/surveys/new', icon: PlusCircle, label: 'Tạo mới' },
+  { to: '/results', icon: BarChart3, label: 'Kết quả' },
   { to: '/settings/users', icon: Users, label: 'Người dùng' },
 ];
 

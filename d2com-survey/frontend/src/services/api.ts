@@ -70,6 +70,26 @@ export interface DashboardStats {
   pain_distribution: Record<string, number>;
 }
 
+export interface QuestionResult {
+  q_id: string;
+  question_text: string;
+  question_type: string;
+  section: string;
+  options: string[] | null;
+  answers: string[];
+  distribution: Record<string, number>;
+  response_count: number;
+}
+
+export interface FormResults {
+  form_id: number;
+  form_name: string;
+  form_type: string;
+  form_version: string;
+  total_surveys: number;
+  questions: QuestionResult[];
+}
+
 // ── Helpers ──
 
 function getToken(): string | null {
@@ -144,6 +164,9 @@ export const formsApi = {
 
   getQuestions: (formId: number) =>
     apiFetch<Question[]>(`/forms/${formId}/questions`),
+
+  getResults: (formId: number) =>
+    apiFetch<FormResults>(`/forms/${formId}/results`),
 };
 
 // ── Surveys API ──
