@@ -1,23 +1,38 @@
+# ==============================================================================
+# D2Com Survey System — Production Dockerfile
+# Based on KMS pattern: Python startup, .dockerignore, slim image
+# ==============================================================================
+
 FROM python:3.12-slim
 
-# Install Node.js 18
-RUN apt-get update && \
-    apt-get install -y curl && \
-    curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && \
-    apt-get install -y nodejs && \
-    rm -rf /var/lib/apt/lists/*
+# System dependencies + cleanup in same layer
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    libpq-dev \
+    curl \
+    && curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
+    && apt-get install -y nodejs \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Install Python deps
+# Install Python dependencies (cached unless requirements.txt changes)
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt \
+    && apt-get purge -y --auto-remove gcc \
+    || true
 
-# Copy all code
-COPY . .
+# Copy backend + config files
+COPY backend/ ./backend/
+COPY alembic/ ./alembic/
+COPY alembic.ini .
 
-# Build frontend
-RUN cd frontend && npm install && npm run build
+# Copy and build frontend
+COPY frontend/ ./frontend/
+RUN cd frontend && npm install --legacy-peer-deps && npm run build
 
+ENV PORT=8000
 EXPOSE 8000
-CMD ["bash", "start.sh"]
+
+# Use Python startup script (avoids CRLF issues)
+CMD ["python", "-m", "backend.startup"]
