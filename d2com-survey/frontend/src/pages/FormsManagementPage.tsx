@@ -28,6 +28,13 @@ export default function FormsManagementPage() {
   const dealerForms = forms.filter(f => f.type === 'dealer').sort((a, b) => b.version.localeCompare(a.version));
   const craftForms = forms.filter(f => f.type === 'craft').sort((a, b) => b.version.localeCompare(a.version));
 
+  const handleToggle = async (formId: number) => {
+    try {
+      await formsApi.toggleActive(formId);
+      loadForms();
+    } catch {}
+  };
+
   const FormCard = ({ form }: { form: SurveyForm }) => (
     <div className={`flex items-center gap-4 p-4 rounded-xl border-2 transition-all ${
       form.is_active
@@ -61,12 +68,24 @@ export default function FormsManagementPage() {
         </p>
       </div>
 
-      <button
-        onClick={() => navigate(`/forms/${form.id}/edit`)}
-        className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-violet-600 hover:bg-violet-50 rounded-lg transition-colors border border-violet-200"
-      >
-        <Pencil size={12} /> Sửa câu hỏi
-      </button>
+      <div className="flex items-center gap-2 shrink-0">
+        <button
+          onClick={() => handleToggle(form.id)}
+          className={`text-xs px-2.5 py-1.5 rounded-lg border transition-colors ${
+            form.is_active
+              ? 'text-orange-600 border-orange-200 hover:bg-orange-50'
+              : 'text-green-600 border-green-200 hover:bg-green-50'
+          }`}
+        >
+          {form.is_active ? 'Tắt' : 'Bật'}
+        </button>
+        <button
+          onClick={() => navigate(`/forms/${form.id}/edit`)}
+          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-violet-600 hover:bg-violet-50 rounded-lg transition-colors border border-violet-200"
+        >
+          <Pencil size={12} /> Sửa câu hỏi
+        </button>
+      </div>
     </div>
   );
 

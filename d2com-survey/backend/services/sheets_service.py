@@ -104,9 +104,15 @@ def append_survey_row(
         try:
             worksheet = spreadsheet.worksheet(tab_name)
         except gspread.exceptions.WorksheetNotFound:
-            # Fallback: try first sheet, or create the tab
-            logger.warning(f"Tab '{tab_name}' not found, using first sheet")
-            worksheet = spreadsheet.sheet1
+            # Auto-create the tab with headers
+            logger.info(f"Tab '{tab_name}' not found, creating it")
+            headers = ["Timestamp", "Customer", "Surveyor"] + q_ids
+            worksheet = spreadsheet.add_worksheet(
+                title=tab_name, rows=1000, cols=len(headers)
+            )
+            worksheet.update([headers], "A1")
+            worksheet.format("1", {"textFormat": {"bold": True}})
+            worksheet.freeze(rows=1)
 
         # Build row: [Timestamp, Customer, Surveyor, answer1, answer2, ...]
         vn_tz = timezone(timedelta(hours=7))

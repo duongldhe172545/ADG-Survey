@@ -128,8 +128,7 @@ async def create_new_version(
             is_required=q.is_required,
         ))
 
-    # 5. Deactivate old form
-    old_form.is_active = False
+    # 5. Keep old form active (user can manually deactivate)
 
     q_count = len(body.questions)
 
@@ -154,3 +153,33 @@ async def create_new_version(
         is_active=True,
         question_count=q_count,
     )
+
+
+@router.patch("/{form_id}/toggle-active")
+async def toggle_form_active(
+    form_id: int,
+    db: AsyncSession = Depends(get_db),
+    _=Depends(get_current_user),
+):
+    """Toggle a form's active status."""
+    form = (await db.execute(
+        select(SurveyForm).where(SurveyForm.id == form_id)
+    )).scalar_one_or_none()
+    if not form:
+        raise HTTPException(status_code=404, detail="Form không tồn tại")
+
+    form.is_active = not form.is_active
+
+    q_count = (await db.execute(
+        select(func.count()).select_from(Question).where(Question.form_id == form.id)
+    )).scalar() or 0
+
+    return FormOut(
+        id=form.id,
+        name=form.name,
+        type=form.type.value,
+        version=form.version,
+        is_active=form.is_active,
+        question_count=q_count,
+    )
+

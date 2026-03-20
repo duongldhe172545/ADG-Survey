@@ -186,6 +186,11 @@ export const formsApi = {
       method: 'POST',
       body: JSON.stringify({ questions }),
     }),
+
+  toggleActive: (formId: number) =>
+    apiFetch<SurveyForm>(`/forms/${formId}/toggle-active`, {
+      method: 'PATCH',
+    }),
 };
 
 // ── Surveys API ──
