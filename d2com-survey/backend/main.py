@@ -9,12 +9,19 @@ from fastapi.staticfiles import StaticFiles
 
 from backend.config import settings
 from backend.api.router import api_router
+from backend.db.database import engine, Base
+# Import all models so Base.metadata knows about them
+import backend.db.models  # noqa: F401
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Startup and shutdown events."""
     print(f"🚀 {settings.APP_NAME} starting...")
+    # Auto-create any new tables (safe: checkfirst=True)
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all, checkfirst=True)
+    print("✅ Database tables synced")
     yield
     print(f"👋 {settings.APP_NAME} shutting down...")
 
