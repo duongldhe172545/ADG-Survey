@@ -7,16 +7,16 @@ from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.db.models import (
-    Survey, SurveyStatus, Customer, FormType,
+    Survey, SurveyStatus, Customer,
     Response, Question, SurveyForm, User
 )
 from backend.schemas import SurveyOut
 
 
-async def generate_resp_id(db: AsyncSession, customer_type: FormType) -> str:
+async def generate_resp_id(db: AsyncSession, customer_type: str) -> str:
     """Generate next resp_id: DL-001, DL-002... or TH-001, TH-002...
-    Uses MAX of existing numbers to avoid duplicates after deletions."""
-    prefix = "DL" if customer_type == FormType.dealer else "TH"
+    Uses first 2 uppercase chars of type as prefix."""
+    prefix = customer_type[:2].upper()
     # Get all existing resp_ids for this type
     result = await db.execute(
         select(Customer.resp_id).where(Customer.type == customer_type)
@@ -57,7 +57,7 @@ async def build_survey_out(db: AsyncSession, survey: Survey) -> SurveyOut:
         customer_id=cust.id,
         customer_resp_id=cust.resp_id,
         customer_name=cust.name,
-        customer_type=cust.type.value,
+        customer_type=cust.type,
         form_name=form.name,
         form_version=form.version,
         status=survey.status.value,

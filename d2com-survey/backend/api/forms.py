@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.db.database import get_db
 from backend.db.models import SurveyForm, Question, QuestionType
-from backend.schemas import FormOut, QuestionOut, QuestionEdit, NewVersionRequest
+from backend.schemas import FormOut, QuestionOut, QuestionEdit, NewVersionRequest, CreateFormRequest
 from backend.middleware.auth_guard import get_current_user
 
 router = APIRouter(prefix="/forms", tags=["forms"])
@@ -36,7 +36,7 @@ async def list_forms(
         )).scalar() or 0
 
         out.append(FormOut(
-            id=f.id, name=f.name, type=f.type.value,
+            id=f.id, name=f.name, type=f.type,
             version=f.version, is_active=f.is_active,
             question_count=q_count,
         ))
@@ -137,7 +137,7 @@ async def create_new_version(
         from backend.services.sheets_service import create_version_tab
         q_ids = [q.q_id for q in body.questions]
         create_version_tab(
-            form_type=new_form.type.value,
+            form_type=new_form.type,
             form_version=new_version,
             q_ids=q_ids,
         )
@@ -148,7 +148,7 @@ async def create_new_version(
     return FormOut(
         id=new_form.id,
         name=new_form.name,
-        type=new_form.type.value,
+        type=new_form.type,
         version=new_form.version,
         is_active=True,
         question_count=q_count,
@@ -177,9 +177,71 @@ async def toggle_form_active(
     return FormOut(
         id=form.id,
         name=form.name,
-        type=form.type.value,
+        type=form.type,
         version=form.version,
         is_active=form.is_active,
         question_count=q_count,
     )
 
+
+@router.post("/", response_model=FormOut, status_code=201)
+async def create_form(
+    body: CreateFormRequest,
+    db: AsyncSession = Depends(get_db),
+    _=Depends(get_current_user),
+):
+    """Create a brand new form with custom type."""
+    if not body.questions:
+        raise HTTPException(status_code=400, detail="Cần ít nhất 1 câu hỏi")
+
+    # Create form
+    new_form = SurveyForm(
+        name=body.name,
+        type=body.type.lower(),
+        version="v1",
+        is_active=True,
+    )
+    db.add(new_form)
+    await db.flush()
+
+    # Create questions
+    for i, q in enumerate(body.questions):
+        try:
+            q_type = QuestionType(q.question_type)
+        except ValueError:
+            q_type = QuestionType.short_answer
+
+        db.add(Question(
+            form_id=new_form.id,
+            section=q.section,
+            q_id=q.q_id,
+            question_text=q.question_text,
+            question_type=q_type,
+            options=q.options,
+            display_order=i + 1,
+            is_required=q.is_required,
+        ))
+
+    q_count = len(body.questions)
+
+    # Create Google Sheet tab (non-blocking)
+    try:
+        from backend.services.sheets_service import create_version_tab
+        q_ids = [q.q_id for q in body.questions]
+        create_version_tab(
+            form_type=new_form.type,
+            form_version="v1",
+            q_ids=q_ids,
+        )
+    except Exception as e:
+        import logging
+        logging.warning(f"Sheet tab creation failed (non-blocking): {e}")
+
+    return FormOut(
+        id=new_form.id,
+        name=new_form.name,
+        type=new_form.type,
+        version="v1",
+        is_active=True,
+        question_count=q_count,
+    )

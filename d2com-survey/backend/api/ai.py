@@ -103,7 +103,7 @@ async def run_analysis(
     # 5. Call Gemini AI
     try:
         result = await analyze_survey(
-            form_type=form.type.value,
+            form_type=form.type,
             qa_pairs=qa_pairs,
         )
     except RuntimeError as e:
@@ -241,7 +241,7 @@ async def run_form_analysis(
     # 6. Call Gemini AI
     try:
         result = await analyze_form(
-            form_type=form.type.value,
+            form_type=form.type,
             total_surveys=total_surveys,
             questions_data=questions_data,
         )
@@ -251,7 +251,7 @@ async def run_form_analysis(
     return {
         "form_id": form.id,
         "form_name": form.name,
-        "form_type": form.type.value,
+        "form_type": form.type,
         "total_surveys": total_surveys,
         **result,
     }

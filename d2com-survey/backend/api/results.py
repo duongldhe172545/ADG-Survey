@@ -110,7 +110,7 @@ async def get_form_results(
     return {
         "form_id": form.id,
         "form_name": form.name,
-        "form_type": form.type.value,
+        "form_type": form.type,
         "form_version": form.version,
         "total_surveys": total_surveys,
         "questions": results,

@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.db.database import get_db
 from backend.db.models import (
-    Survey, SurveyStatus, Customer, FormType,
+    Survey, SurveyStatus, Customer,
     Response, Question, SurveyForm, User
 )
 from backend.schemas import (
@@ -72,7 +72,7 @@ async def create_survey(
     current_user: User = Depends(get_current_user),
 ):
     """Create new survey: auto-creates customer + survey in draft status."""
-    customer_type = FormType(body.customer_type)
+    customer_type = body.customer_type
 
     # Find active form
     if body.form_id:
@@ -126,7 +126,7 @@ async def list_surveys(
     if status:
         query = query.where(Survey.status == SurveyStatus(status))
     if customer_type:
-        query = query.join(Customer).where(Customer.type == FormType(customer_type))
+        query = query.join(Customer).where(Customer.type == customer_type)
     if search:
         if Customer not in [c.entity for c in query.columns_clause_froms]:
             query = query.join(Customer)
@@ -288,7 +288,7 @@ async def submit_survey(
             answers = {q.q_id: responses.get(q.id, "") for q in questions}
 
             sheet_exported = append_survey_row(
-                form_type=form.type.value,
+                form_type=form.type,
                 form_version=form.version,
                 customer_name=customer.name or customer.resp_id,
                 surveyor_name=current_user.email,

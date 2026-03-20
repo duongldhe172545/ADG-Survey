@@ -7,7 +7,7 @@ from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.db.database import get_db
-from backend.db.models import Survey, SurveyStatus, Customer, FormType
+from backend.db.models import Survey, SurveyStatus, Customer
 from backend.schemas import DashboardStats
 from backend.middleware.auth_guard import get_current_user
 
@@ -28,13 +28,15 @@ async def get_stats(
         )).scalar() or 0
         by_status[s.value] = count
 
-    # By customer type
+    # By customer type (dynamic — queries distinct types from DB)
     by_type = {}
-    for t in FormType:
-        count = (await db.execute(
-            select(func.count()).select_from(Survey).join(Customer).where(Customer.type == t)
-        )).scalar() or 0
-        by_type[t.value] = count
+    type_rows = (await db.execute(
+        select(Customer.type, func.count())
+        .join(Survey, Survey.customer_id == Customer.id)
+        .group_by(Customer.type)
+    )).all()
+    for row in type_rows:
+        by_type[row[0]] = row[1]
 
     # Pain cluster distribution
     pain_rows = (await db.execute(

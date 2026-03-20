@@ -88,6 +88,13 @@ class NewVersionRequest(BaseModel):
     questions: List[QuestionEdit]
 
 
+class CreateFormRequest(BaseModel):
+    """Request body for creating a brand new form."""
+    name: str
+    type: str  # free-text, e.g. "dealer", "craft", "contractor"
+    questions: List[QuestionEdit]
+
+
 # ── Customers ──
 
 class CustomerOut(BaseModel):
