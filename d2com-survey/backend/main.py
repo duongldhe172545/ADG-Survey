@@ -19,9 +19,12 @@ async def lifespan(app: FastAPI):
     """Startup and shutdown events."""
     print(f"🚀 {settings.APP_NAME} starting...")
     # Auto-create any new tables (safe: checkfirst=True)
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all, checkfirst=True)
-    print("✅ Database tables synced")
+    try:
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all, checkfirst=True)
+        print("✅ Database tables synced")
+    except Exception as e:
+        print(f"⚠️ Table sync failed (non-fatal): {e}")
     yield
     print(f"👋 {settings.APP_NAME} shutting down...")
 
