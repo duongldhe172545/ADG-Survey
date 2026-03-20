@@ -33,19 +33,14 @@ def main():
         os.environ["GDRIVE_SERVICE_ACCOUNT_FILE"] = "/app/service-account.json"
         print("✅ Service account file created from env var")
 
-    # Run Alembic migrations
+    # Seed database (create_all is handled in main.py lifespan)
     db_url = os.environ.get("DATABASE_URL", "")
     if db_url:
-        print("🔄 Running database migrations...")
-        run("alembic upgrade head", cwd="/app")
-        print("✅ Migrations complete")
-
-        # Seed database
         print("🌱 Seeding database...")
-        run("python -m backend.db.seed", cwd="/app")
+        run("python -m backend.db.seed", cwd="/app", fatal=False)
         print("✅ Seed complete")
     else:
-        print("⚠️ DATABASE_URL not set, skipping migrations")
+        print("⚠️ DATABASE_URL not set, skipping seed")
 
     # Start uvicorn
     port = os.environ.get("PORT", "8000")
