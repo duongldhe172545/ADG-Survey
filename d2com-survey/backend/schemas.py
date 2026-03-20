@@ -72,6 +72,22 @@ class FormOut(BaseModel):
         from_attributes = True
 
 
+class QuestionEdit(BaseModel):
+    """Schema for creating/editing a question in a new form version."""
+    q_id: str
+    section: Optional[str] = None
+    question_text: str
+    question_type: str = "short_answer"
+    options: Optional[list] = None
+    display_order: int = 0
+    is_required: bool = False
+
+
+class NewVersionRequest(BaseModel):
+    """Request body for creating a new form version with edited questions."""
+    questions: List[QuestionEdit]
+
+
 # ── Customers ──
 
 class CustomerOut(BaseModel):

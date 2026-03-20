@@ -4,7 +4,7 @@
  */
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BarChart3, Store, Wrench, Loader2 } from 'lucide-react';
+import { BarChart3, Store, Wrench, Loader2, Settings2 } from 'lucide-react';
 import { formsApi, type SurveyForm } from '../services/api';
 
 export default function ResultsListPage() {
@@ -63,10 +63,18 @@ export default function ResultsListPage() {
             <p className="text-sm text-[var(--color-text-muted)]">
               {f.name} {f.version} • {f.question_count} câu hỏi
             </p>
-            <div className={`mt-3 text-xs font-medium ${
-              f.type === 'dealer' ? 'text-blue-600' : 'text-violet-600'
-            }`}>
-              Xem kết quả →
+            <div className="mt-3 flex items-center justify-between">
+              <div className={`text-xs font-medium ${
+                f.type === 'dealer' ? 'text-blue-600' : 'text-violet-600'
+              }`}>
+                Xem kết quả →
+              </div>
+              <div
+                onClick={(e) => { e.stopPropagation(); navigate(`/forms/${f.id}/edit`); }}
+                className="text-xs text-gray-400 hover:text-violet-600 flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-violet-50 transition-colors"
+              >
+                <Settings2 size={12} /> Sửa câu hỏi
+              </div>
             </div>
           </button>
         ))}

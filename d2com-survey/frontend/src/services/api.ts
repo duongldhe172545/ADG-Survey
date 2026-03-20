@@ -27,9 +27,20 @@ export interface SurveyForm {
 export interface Question {
   id: number;
   q_id: string;
+  section: string | null;
   question_text: string;
   question_type: 'short_answer' | 'multiple_choice' | 'checkboxes' | 'linear_scale';
   options: string[] | null;
+  display_order: number;
+  is_required: boolean;
+}
+
+export interface QuestionEditData {
+  q_id: string;
+  section?: string | null;
+  question_text: string;
+  question_type: string;
+  options?: string[] | null;
   display_order: number;
   is_required: boolean;
 }
@@ -162,11 +173,19 @@ export const usersApi = {
 export const formsApi = {
   list: () => apiFetch<SurveyForm[]>('/forms/'),
 
+  listAll: () => apiFetch<SurveyForm[]>('/forms/?active_only=false'),
+
   getQuestions: (formId: number) =>
     apiFetch<Question[]>(`/forms/${formId}/questions`),
 
   getResults: (formId: number) =>
     apiFetch<FormResults>(`/forms/${formId}/results`),
+
+  createNewVersion: (formId: number, questions: QuestionEditData[]) =>
+    apiFetch<SurveyForm>(`/forms/${formId}/new-version`, {
+      method: 'POST',
+      body: JSON.stringify({ questions }),
+    }),
 };
 
 // ── Surveys API ──

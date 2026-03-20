@@ -8,8 +8,8 @@ from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.db.database import get_db
-from backend.db.models import SurveyForm, Question
-from backend.schemas import FormOut, QuestionOut
+from backend.db.models import SurveyForm, Question, QuestionType
+from backend.schemas import FormOut, QuestionOut, QuestionEdit, NewVersionRequest
 from backend.middleware.auth_guard import get_current_user
 
 router = APIRouter(prefix="/forms", tags=["forms"])
@@ -63,6 +63,81 @@ async def get_form_questions(
             id=q.id, q_id=q.q_id, question_text=q.question_text,
             question_type=q.question_type.value, options=q.options,
             display_order=q.display_order, is_required=q.is_required,
+            section=q.section,
         )
         for q in result.scalars().all()
     ]
+
+
+@router.post("/{form_id}/new-version")
+async def create_new_version(
+    form_id: int,
+    body: NewVersionRequest,
+    db: AsyncSession = Depends(get_db),
+    _=Depends(get_current_user),
+):
+    """
+    Create a new version of a form with edited questions.
+    - Clones the form with incremented version
+    - Creates new questions
+    - Deactivates the old form
+    """
+    # 1. Get current form
+    old_form = (await db.execute(
+        select(SurveyForm).where(SurveyForm.id == form_id)
+    )).scalar_one_or_none()
+    if not old_form:
+        raise HTTPException(status_code=404, detail="Form không tồn tại")
+
+    if not body.questions:
+        raise HTTPException(status_code=400, detail="Cần ít nhất 1 câu hỏi")
+
+    # 2. Increment version (v1 → v2, v2 → v3, etc.)
+    old_v = old_form.version  # e.g. "v1"
+    try:
+        v_num = int(old_v.replace("v", "").replace("V", ""))
+    except ValueError:
+        v_num = 1
+    new_version = f"v{v_num + 1}"
+
+    # 3. Create new form
+    new_form = SurveyForm(
+        name=old_form.name.replace(old_v, new_version) if old_v in old_form.name else old_form.name,
+        type=old_form.type,
+        version=new_version,
+        is_active=True,
+    )
+    db.add(new_form)
+    await db.flush()  # get new_form.id
+
+    # 4. Create questions for new form
+    for i, q in enumerate(body.questions):
+        try:
+            q_type = QuestionType(q.question_type)
+        except ValueError:
+            q_type = QuestionType.short_answer
+
+        db.add(Question(
+            form_id=new_form.id,
+            section=q.section,
+            q_id=q.q_id,
+            question_text=q.question_text,
+            question_type=q_type,
+            options=q.options,
+            display_order=i + 1,
+            is_required=q.is_required,
+        ))
+
+    # 5. Deactivate old form
+    old_form.is_active = False
+
+    q_count = len(body.questions)
+
+    return FormOut(
+        id=new_form.id,
+        name=new_form.name,
+        type=new_form.type.value,
+        version=new_form.version,
+        is_active=True,
+        question_count=q_count,
+    )
