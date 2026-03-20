@@ -215,3 +215,71 @@ export const surveysApi = {
 export const dashboardApi = {
   getStats: () => apiFetch<DashboardStats>('/dashboard/stats'),
 };
+
+// ── AI Analysis API ──
+
+export interface PainItem {
+  pain: string;
+  severity: string;
+  evidence: string;
+}
+
+export interface AnalysisResult {
+  id: number;
+  survey_id: number;
+  pain_cluster: string | null;
+  priority: string | null;
+  priority_score: number | null;
+  top_pains: PainItem[];
+  retention_score: number | null;
+  pilot_readiness: number | null;
+  root_cause_map: string | null;
+  recommendation: string | null;
+  summary: string | null;
+  created_at: string | null;
+}
+
+export const aiApi = {
+  analyze: (surveyId: number, force = false) =>
+    apiFetch<AnalysisResult>(`/ai/analyze-survey/${surveyId}?force=${force}`, {
+      method: 'POST',
+    }),
+
+  getAnalysis: (surveyId: number) =>
+    apiFetch<AnalysisResult | null>(`/ai/analysis/${surveyId}`),
+
+  analyzeForm: (formId: number) =>
+    apiFetch<FormAnalysisResult>(`/ai/analyze-form/${formId}`, {
+      method: 'POST',
+    }),
+};
+
+// ── Form-Level Analysis Types ──
+
+export interface FormPainItem {
+  rank: number;
+  pain: string;
+  percentage: number;
+  severity: string;
+  action: string;
+}
+
+export interface PilotItem {
+  pilot_name: string;
+  description: string;
+  priority: string;
+  expected_impact: string;
+}
+
+export interface FormAnalysisResult {
+  form_id: number;
+  form_name: string;
+  form_type: string;
+  total_surveys: number;
+  top_3_pains: FormPainItem[];
+  key_insights: string[];
+  recommended_pilots: PilotItem[];
+  retention_avg: number;
+  readiness_avg: number;
+  executive_summary: string;
+}

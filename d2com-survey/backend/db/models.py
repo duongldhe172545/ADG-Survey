@@ -128,6 +128,7 @@ class Survey(Base):
     surveyor = relationship("User", back_populates="surveys", foreign_keys=[surveyed_by])
     responses = relationship("Response", back_populates="survey", cascade="all, delete-orphan")
     brand_kits = relationship("BrandKit", back_populates="survey")
+    analysis_results = relationship("AnalysisResult", back_populates="survey")
 
 
 class Response(Base):
@@ -163,3 +164,26 @@ class BrandKit(Base):
 
     # Relationships
     survey = relationship("Survey", back_populates="brand_kits")
+
+
+class AnalysisResult(Base):
+    __tablename__ = "analysis_results"
+
+    id = Column(Integer, primary_key=True, index=True)
+    survey_id = Column(Integer, ForeignKey("surveys.id"), nullable=False, index=True)
+    pain_cluster = Column(String(255), nullable=True)
+    priority = Column(String(10), nullable=True)          # P0, P1, P2, P3
+    priority_score = Column(Integer, nullable=True)        # 0-100
+    top_pains = Column(JSON, nullable=True)                # [{pain, severity, evidence}]
+    retention_score = Column(Integer, nullable=True)       # 0-10
+    pilot_readiness = Column(Integer, nullable=True)       # 0-10
+    root_cause_map = Column(Text, nullable=True)
+    recommendation = Column(Text, nullable=True)
+    summary = Column(Text, nullable=True)
+    raw_response = Column(JSON, nullable=True)             # Full Gemini response
+    created_at = Column(DateTime, server_default=func.now())
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+
+    # Relationships
+    survey = relationship("Survey", back_populates="analysis_results")
+

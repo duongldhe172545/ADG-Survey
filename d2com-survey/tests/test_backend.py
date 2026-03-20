@@ -124,10 +124,10 @@ print("\n🔍 2. Testing model integrity...")
 def test_model_tables():
     from backend.db.database import Base
     tables = list(Base.metadata.tables.keys())
-    expected = ["users", "survey_forms", "questions", "customers", "surveys", "responses", "brand_kits"]
+    expected = ["users", "survey_forms", "questions", "customers", "surveys", "responses", "brand_kits", "analysis_results"]
     for t in expected:
         assert t in tables, f"Missing table: {t}"
-    assert len(tables) == 7, f"Expected 7 tables, got {len(tables)}: {tables}"
+    assert len(tables) == 8, f"Expected 8 tables, got {len(tables)}: {tables}"
 
 
 def test_model_relationships():
@@ -326,6 +326,74 @@ def test_jwt_invalid():
 
 test("JWT create → decode roundtrip", test_jwt_roundtrip)
 test("JWT invalid token returns None", test_jwt_invalid)
+
+
+# ── 6. AI Analysis Tests ──
+print("\n🔍 6. Testing AI analysis...")
+
+
+def test_ai_service_import():
+    from backend.services.ai_service import analyze_survey, _build_prompt, ANALYSIS_SCHEMA
+    from backend.services.ai_service import analyze_form, _build_form_prompt, FORM_ANALYSIS_SCHEMA
+    assert ANALYSIS_SCHEMA is not None
+    assert FORM_ANALYSIS_SCHEMA is not None
+    assert callable(analyze_survey)
+    assert callable(analyze_form)
+
+
+def test_ai_api_import():
+    from backend.api.ai import router, run_analysis, get_analysis
+    assert router is not None
+
+
+def test_analysis_model():
+    from backend.db.models import AnalysisResult
+    cols = [c.name for c in AnalysisResult.__table__.columns]
+    expected = [
+        "id", "survey_id", "pain_cluster", "priority", "priority_score",
+        "top_pains", "retention_score", "pilot_readiness",
+        "root_cause_map", "recommendation", "summary", "raw_response",
+        "created_at", "created_by"
+    ]
+    for col in expected:
+        assert col in cols, f"Missing column in analysis_results: {col}"
+
+
+def test_analysis_table_exists():
+    from backend.db.database import Base
+    tables = list(Base.metadata.tables.keys())
+    assert "analysis_results" in tables, f"Missing table: analysis_results. Found: {tables}"
+    assert len(tables) == 8, f"Expected 8 tables, got {len(tables)}: {tables}"
+
+
+def test_analysis_schema():
+    from backend.schemas import AnalysisOut, PainItem
+    pain = PainItem(pain="Test pain", severity="high", evidence="D06: test")
+    assert pain.severity == "high"
+    analysis = AnalysisOut(
+        id=1, survey_id=1, pain_cluster="Test", priority="P1",
+        priority_score=75, top_pains=[pain], retention_score=5,
+        pilot_readiness=7, root_cause_map="A → B → C",
+        recommendation="Test rec", summary="Test summary",
+    )
+    assert analysis.priority_score == 75
+    assert len(analysis.top_pains) == 1
+
+
+def test_ai_route_registered():
+    from backend.api.router import api_router
+    routes = [r.path for r in api_router.routes]
+    assert "/api/v1/ai/analyze-survey/{survey_id}" in routes, f"Missing AI route. Available: {routes}"
+    assert "/api/v1/ai/analysis/{survey_id}" in routes, f"Missing analysis GET route. Available: {routes}"
+    assert "/api/v1/ai/analyze-form/{form_id}" in routes, f"Missing form analysis route. Available: {routes}"
+
+
+test("ai_service import & exports", test_ai_service_import)
+test("ai API import", test_ai_api_import)
+test("AnalysisResult model columns", test_analysis_model)
+test("analysis_results table exists (8 total)", test_analysis_table_exists)
+test("AnalysisOut schema construction", test_analysis_schema)
+test("AI routes registered", test_ai_route_registered)
 
 
 # ── Summary ──

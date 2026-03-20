@@ -145,3 +145,27 @@ class DashboardStats(BaseModel):
     by_type: dict
     total_customers: int
     pain_distribution: dict
+
+
+# ── AI Analysis ──
+
+class PainItem(BaseModel):
+    pain: str
+    severity: str
+    evidence: str
+
+
+class AnalysisOut(BaseModel):
+    id: int
+    survey_id: int
+    pain_cluster: Optional[str] = None
+    priority: Optional[str] = None
+    priority_score: Optional[int] = None
+    top_pains: List[PainItem] = []
+    retention_score: Optional[int] = None
+    pilot_readiness: Optional[int] = None
+    root_cause_map: Optional[str] = None
+    recommendation: Optional[str] = None
+    summary: Optional[str] = None
+    created_at: Optional[str] = None
+

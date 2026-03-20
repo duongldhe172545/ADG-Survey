@@ -7,9 +7,10 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-  Save, Send, ArrowLeft, Loader2, CheckCircle2, AlertCircle
+  Save, Send, ArrowLeft, Loader2, CheckCircle2, AlertCircle,
+  BrainCircuit, RefreshCw
 } from 'lucide-react';
-import { surveysApi, type SurveyItem, type ResponseItem } from '../services/api';
+import { surveysApi, aiApi, type SurveyItem, type ResponseItem, type AnalysisResult } from '../services/api';
 
 export default function SurveyFormPage() {
   const { id } = useParams<{ id: string }>();
@@ -24,6 +25,9 @@ export default function SurveyFormPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [saveMsg, setSaveMsg] = useState('');
+  const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [showAnalysis, setShowAnalysis] = useState(false);
 
   // Load survey + responses
   useEffect(() => {
@@ -40,6 +44,17 @@ export default function SurveyFormPage() {
           if (resp.answer) existing[resp.question_id] = resp.answer;
         });
         setAnswers(existing);
+
+        // Load cached AI analysis if survey is complete
+        if (s.status === 'complete' || s.status === 'synced') {
+          try {
+            const cached = await aiApi.getAnalysis(surveyId);
+            if (cached) {
+              setAnalysis(cached);
+              setShowAnalysis(true);
+            }
+          } catch { /* ignore — no cached analysis */ }
+        }
       } catch (e: any) {
         setError(e.message);
       } finally {
@@ -107,6 +122,21 @@ export default function SurveyFormPage() {
     }
   };
 
+  // AI Analysis
+  const handleAnalyze = async (force = false) => {
+    setAnalyzing(true);
+    setError('');
+    try {
+      const result = await aiApi.analyze(surveyId, force);
+      setAnalysis(result);
+      setShowAnalysis(true);
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setAnalyzing(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -159,6 +189,17 @@ export default function SurveyFormPage() {
 
         {/* Actions — stack on mobile */}
         <div className="flex items-center gap-2 shrink-0">
+          {(survey.status === 'complete' || survey.status === 'synced') && (
+            <button
+              onClick={() => handleAnalyze(false)}
+              disabled={analyzing}
+              className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2 bg-gradient-to-r from-violet-600 to-purple-600 text-white rounded-xl text-sm font-medium hover:from-violet-700 hover:to-purple-700 transition-all disabled:opacity-50 shadow-sm"
+            >
+              {analyzing ? <Loader2 size={14} className="animate-spin" /> : <BrainCircuit size={14} />}
+              <span className="hidden sm:inline">AI Phân tích</span>
+              <span className="sm:hidden">AI</span>
+            </button>
+          )}
           <button
             onClick={handleSave}
             disabled={saving}
@@ -205,6 +246,9 @@ export default function SurveyFormPage() {
         </div>
       )}
 
+      {/* AI Analysis Result Card */}
+      {showAnalysis && analysis && <AnalysisCard analysis={analysis} onReanalyze={() => handleAnalyze(true)} analyzing={analyzing} />}
+
       {/* Questions grouped by section */}
       {sections.map(([sectionName, sectionResponses]) => (
         <div key={sectionName} className="space-y-3">
@@ -242,6 +286,136 @@ export default function SurveyFormPage() {
         >
           <Send size={16} /> Gửi khảo sát
         </button>
+      </div>
+    </div>
+  );
+}
+
+// ── AI Analysis Card Component ──
+
+const PRIORITY_STYLES: Record<string, { bg: string; text: string; label: string }> = {
+  P0: { bg: 'bg-red-100', text: 'text-red-700', label: 'Cấp bách' },
+  P1: { bg: 'bg-orange-100', text: 'text-orange-700', label: 'Ưu tiên cao' },
+  P2: { bg: 'bg-yellow-100', text: 'text-yellow-700', label: 'Theo dõi' },
+  P3: { bg: 'bg-green-100', text: 'text-green-700', label: 'Chưa cấp bách' },
+};
+
+const SEVERITY_COLORS: Record<string, string> = {
+  high: 'bg-red-500',
+  medium: 'bg-orange-400',
+  low: 'bg-green-400',
+};
+
+function ScoreBar({ label, score, max, color }: { label: string; score: number; max: number; color: string }) {
+  const pct = max > 0 ? (score / max) * 100 : 0;
+  return (
+    <div className="space-y-1">
+      <div className="flex items-center justify-between text-xs">
+        <span className="font-medium text-[var(--color-text)]">{label}</span>
+        <span className="font-bold" style={{ color }}>{score}/{max}</span>
+      </div>
+      <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+        <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, backgroundColor: color }} />
+      </div>
+    </div>
+  );
+}
+
+function AnalysisCard({ analysis, onReanalyze, analyzing }: { analysis: AnalysisResult; onReanalyze: () => void; analyzing: boolean }) {
+  const pri = PRIORITY_STYLES[analysis.priority || 'P2'] || PRIORITY_STYLES.P2;
+
+  return (
+    <div className="bg-gradient-to-br from-violet-50 via-white to-purple-50 rounded-xl border border-violet-200 shadow-sm overflow-hidden animate-slideIn">
+      {/* Header */}
+      <div className="px-5 py-4 flex items-center justify-between border-b border-violet-100">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
+            <BrainCircuit size={18} className="text-white" />
+          </div>
+          <div>
+            <h3 className="text-sm font-bold text-[var(--color-text)]">AI Phân tích</h3>
+            {analysis.created_at && (
+              <p className="text-xs text-[var(--color-text-muted)]">
+                {new Date(analysis.created_at).toLocaleString('vi-VN')}
+              </p>
+            )}
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className={`px-2.5 py-1 rounded-lg text-xs font-bold ${pri.bg} ${pri.text}`}>
+            {analysis.priority} — {pri.label}
+          </span>
+          <button
+            onClick={onReanalyze}
+            disabled={analyzing}
+            className="p-1.5 rounded-lg hover:bg-violet-100 text-violet-500 transition-colors disabled:opacity-50"
+            title="Phân tích lại"
+          >
+            <RefreshCw size={14} className={analyzing ? 'animate-spin' : ''} />
+          </button>
+        </div>
+      </div>
+
+      <div className="p-5 space-y-4">
+        {/* Pain Cluster + Priority Score */}
+        <div className="flex items-start gap-4">
+          <div className="flex-1">
+            <p className="text-xs font-medium text-[var(--color-text-muted)] mb-1">Pain Cluster</p>
+            <p className="text-sm font-semibold text-[var(--color-text)]">{analysis.pain_cluster}</p>
+          </div>
+          <div className="text-right">
+            <p className="text-xs font-medium text-[var(--color-text-muted)] mb-1">Điểm ưu tiên</p>
+            <p className="text-2xl font-black text-violet-600">{analysis.priority_score}<span className="text-xs font-medium text-[var(--color-text-muted)]">/100</span></p>
+          </div>
+        </div>
+
+        {/* Score bars */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <ScoreBar label="Retention Maturity" score={analysis.retention_score ?? 0} max={10} color="#3b82f6" />
+          <ScoreBar label="Pilot Readiness" score={analysis.pilot_readiness ?? 0} max={10} color="#8b5cf6" />
+        </div>
+
+        {/* Top Pains */}
+        {analysis.top_pains && analysis.top_pains.length > 0 && (
+          <div>
+            <p className="text-xs font-medium text-[var(--color-text-muted)] mb-2">Top Pains</p>
+            <div className="space-y-2">
+              {analysis.top_pains.map((p, i) => (
+                <div key={i} className="flex items-start gap-2.5 bg-white/70 rounded-lg p-3 border border-gray-100">
+                  <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${SEVERITY_COLORS[p.severity] || 'bg-gray-400'}`} />
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-[var(--color-text)]">{p.pain}</p>
+                    <p className="text-xs text-[var(--color-text-muted)] mt-0.5">{p.evidence}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Root Cause Map */}
+        {analysis.root_cause_map && (
+          <div className="bg-white/70 rounded-lg p-3 border border-gray-100">
+            <p className="text-xs font-medium text-[var(--color-text-muted)] mb-1">Root Cause Map</p>
+            <p className="text-sm text-[var(--color-text)]">{analysis.root_cause_map}</p>
+          </div>
+        )}
+
+        {/* Recommendation */}
+        {analysis.recommendation && (
+          <div className="bg-violet-50/50 rounded-lg p-3 border border-violet-100">
+            <p className="text-xs font-medium text-violet-600 mb-1">💡 Đề xuất</p>
+            <p className="text-sm font-medium text-[var(--color-text)]">{analysis.recommendation}</p>
+          </div>
+        )}
+
+        {/* Summary */}
+        {analysis.summary && (
+          <div>
+            <p className="text-xs font-medium text-[var(--color-text-muted)] mb-1">Tóm tắt</p>
+            <p className="text-sm text-[var(--color-text)] leading-relaxed">{analysis.summary}</p>
+          </div>
+        )}
       </div>
     </div>
   );

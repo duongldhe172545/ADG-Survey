@@ -4,8 +4,8 @@
  */
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, BarChart3, Loader2, FileText, Users } from 'lucide-react';
-import { formsApi, type FormResults, type QuestionResult } from '../services/api';
+import { ArrowLeft, BarChart3, Loader2, FileText, Users, BrainCircuit } from 'lucide-react';
+import { formsApi, aiApi, type FormResults, type QuestionResult, type FormAnalysisResult } from '../services/api';
 
 /* ── Horizontal bar for one option ── */
 function Bar({ label, count, max }: { label: string; count: number; max: number }) {
@@ -93,6 +93,8 @@ export default function ResultsPage() {
   const [results, setResults] = useState<FormResults | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [formAnalysis, setFormAnalysis] = useState<FormAnalysisResult | null>(null);
+  const [analyzing, setAnalyzing] = useState(false);
 
   useEffect(() => {
     if (!formId) return;
@@ -147,6 +149,23 @@ export default function ResultsPage() {
             {results.form_type === 'dealer' ? 'Đại lý' : 'Thợ'} • {results.questions.length} câu hỏi
           </p>
         </div>
+        {results.total_surveys > 0 && (
+          <button
+            onClick={async () => {
+              setAnalyzing(true); setError('');
+              try {
+                const r = await aiApi.analyzeForm(Number(formId));
+                setFormAnalysis(r);
+              } catch (e: any) { setError(e.message); }
+              finally { setAnalyzing(false); }
+            }}
+            disabled={analyzing}
+            className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-violet-600 to-purple-600 text-white rounded-xl text-sm font-medium hover:from-violet-700 hover:to-purple-700 transition-all disabled:opacity-50 shadow-sm shrink-0"
+          >
+            {analyzing ? <Loader2 size={14} className="animate-spin" /> : <BrainCircuit size={14} />}
+            AI Phân tích tổng hợp
+          </button>
+        )}
       </div>
 
       {/* Summary cards */}
@@ -178,6 +197,9 @@ export default function ResultsPage() {
         </div>
       )}
 
+      {/* AI Analysis Card */}
+      {formAnalysis && <FormAnalysisCard data={formAnalysis} />}
+
       {/* Questions by section */}
       {Object.entries(sections).map(([section, questions]) => (
         <div key={section}>
@@ -191,6 +213,113 @@ export default function ResultsPage() {
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+// ── Form Analysis Card ──
+
+const SEVERITY_DOT: Record<string, string> = {
+  high: 'bg-red-500', medium: 'bg-orange-400', low: 'bg-green-400',
+};
+const PRIORITY_BADGE: Record<string, string> = {
+  high: 'bg-red-100 text-red-700', medium: 'bg-yellow-100 text-yellow-700', low: 'bg-green-100 text-green-700',
+};
+
+function FormAnalysisCard({ data }: { data: FormAnalysisResult }) {
+  return (
+    <div className="bg-gradient-to-br from-violet-50 via-white to-purple-50 rounded-xl border border-violet-200 shadow-sm overflow-hidden animate-slideIn">
+      {/* Header */}
+      <div className="px-5 py-4 flex items-center justify-between border-b border-violet-100">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
+            <BrainCircuit size={18} className="text-white" />
+          </div>
+          <div>
+            <h3 className="text-sm font-bold">AI Phân tích tổng hợp</h3>
+            <p className="text-xs text-[var(--color-text-muted)]">
+              {data.total_surveys} khảo sát • {data.form_type === 'dealer' ? 'Đại lý' : 'Thợ'}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="p-5 space-y-5">
+        {/* Score bars */}
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-1">
+            <div className="flex justify-between text-xs"><span className="font-medium">Retention Maturity</span><span className="font-bold text-blue-600">{data.retention_avg}/10</span></div>
+            <div className="w-full h-2 bg-gray-100 rounded-full"><div className="h-full bg-blue-500 rounded-full transition-all duration-700" style={{ width: `${data.retention_avg * 10}%` }} /></div>
+          </div>
+          <div className="space-y-1">
+            <div className="flex justify-between text-xs"><span className="font-medium">Pilot Readiness</span><span className="font-bold text-violet-600">{data.readiness_avg}/10</span></div>
+            <div className="w-full h-2 bg-gray-100 rounded-full"><div className="h-full bg-violet-500 rounded-full transition-all duration-700" style={{ width: `${data.readiness_avg * 10}%` }} /></div>
+          </div>
+        </div>
+
+        {/* Top 3 Pains */}
+        {data.top_3_pains.length > 0 && (
+          <div>
+            <p className="text-xs font-medium text-[var(--color-text-muted)] mb-2">Top 3 Pains</p>
+            <div className="space-y-2">
+              {data.top_3_pains.map((p) => (
+                <div key={p.rank} className="flex items-start gap-3 bg-white/70 rounded-lg p-3 border border-gray-100">
+                  <span className="w-6 h-6 rounded-full bg-violet-100 text-violet-700 flex items-center justify-center text-xs font-bold shrink-0">#{p.rank}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-medium">{p.pain}</p>
+                      <div className={`w-2 h-2 rounded-full ${SEVERITY_DOT[p.severity] || 'bg-gray-400'}`} />
+                    </div>
+                    <p className="text-xs text-[var(--color-text-muted)] mt-0.5">{p.percentage}% • {p.action}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Key Insights */}
+        {data.key_insights.length > 0 && (
+          <div>
+            <p className="text-xs font-medium text-[var(--color-text-muted)] mb-2">Key Insights</p>
+            <ul className="space-y-1.5">
+              {data.key_insights.map((insight, i) => (
+                <li key={i} className="flex items-start gap-2 text-sm">
+                  <span className="text-violet-500 mt-0.5 shrink-0">•</span>
+                  {insight}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* Recommended Pilots */}
+        {data.recommended_pilots.length > 0 && (
+          <div>
+            <p className="text-xs font-medium text-[var(--color-text-muted)] mb-2">Recommended Pilots</p>
+            <div className="space-y-2">
+              {data.recommended_pilots.map((p, i) => (
+                <div key={i} className="bg-white/70 rounded-lg p-3 border border-gray-100">
+                  <div className="flex items-center gap-2 mb-1">
+                    <p className="text-sm font-semibold">{p.pilot_name}</p>
+                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${PRIORITY_BADGE[p.priority] || 'bg-gray-100 text-gray-600'}`}>{p.priority}</span>
+                  </div>
+                  <p className="text-xs text-[var(--color-text-muted)]">{p.description}</p>
+                  <p className="text-xs text-violet-600 mt-1">→ {p.expected_impact}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Executive Summary */}
+        {data.executive_summary && (
+          <div className="bg-violet-50/50 rounded-lg p-4 border border-violet-100">
+            <p className="text-xs font-medium text-violet-600 mb-1">📄 Executive Summary</p>
+            <p className="text-sm text-[var(--color-text)] leading-relaxed">{data.executive_summary}</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

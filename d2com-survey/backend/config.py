@@ -33,6 +33,9 @@ class Settings(BaseSettings):
     GSHEET_RAW_DEALER_ID: str = ""
     GSHEET_RAW_CRAFT_ID: str = ""
     
+    # Gemini AI
+    GEMINI_API_KEY: str = ""
+    
     # App
     APP_NAME: str = "D2Com Survey"
     CORS_ORIGINS: list[str] = ["http://localhost:5173"]
