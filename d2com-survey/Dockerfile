@@ -18,9 +18,8 @@ WORKDIR /app
 
 # Install Python dependencies (cached unless requirements.txt changes)
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt \
-    && apt-get purge -y --auto-remove gcc \
-    || true
+RUN pip install --no-cache-dir -r requirements.txt
+RUN apt-get purge -y --auto-remove gcc || true
 
 # Copy backend + config files
 COPY backend/ ./backend/
