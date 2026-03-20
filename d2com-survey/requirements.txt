@@ -13,8 +13,8 @@ alembic==1.13.0
 
 # Auth
 PyJWT==2.9.0
-google-auth==2.35.0
-google-auth-oauthlib==1.2.1
+google-auth>=2.47.0,<3.0.0
+google-auth-oauthlib>=1.2.1
 
 # Google APIs
 google-api-python-client==2.149.0
