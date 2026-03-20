@@ -25,6 +25,30 @@ async def lifespan(app: FastAPI):
         print("✅ Database tables synced")
     except Exception as e:
         print(f"⚠️ Table sync failed (non-fatal): {e}")
+
+    # Migrate enum columns to varchar (one-time, safe to re-run)
+    try:
+        from sqlalchemy import text
+        async with engine.begin() as conn:
+            # Check if column is still enum type
+            result = await conn.execute(text(
+                "SELECT data_type FROM information_schema.columns "
+                "WHERE table_name = 'survey_forms' AND column_name = 'type'"
+            ))
+            row = result.first()
+            if row and row[0] == 'USER-DEFINED':
+                print("🔄 Migrating type columns from enum to varchar...")
+                await conn.execute(text(
+                    "ALTER TABLE survey_forms ALTER COLUMN type TYPE varchar(50) USING type::text"
+                ))
+                await conn.execute(text(
+                    "ALTER TABLE customers ALTER COLUMN type TYPE varchar(50) USING type::text"
+                ))
+                # Drop old enum type
+                await conn.execute(text("DROP TYPE IF EXISTS formtype"))
+                print("✅ Type columns migrated to varchar")
+    except Exception as e:
+        print(f"⚠️ Enum migration failed (non-fatal): {e}")
     yield
     print(f"👋 {settings.APP_NAME} shutting down...")
 
