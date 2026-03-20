@@ -2,9 +2,6 @@
 # D2Com Survey System — Startup Script
 export PYTHONPATH=/app:$PYTHONPATH
 
-echo "🔄 Running migrations..."
-alembic upgrade head
-
 echo "🌱 Running seed..."
 python -m backend.db.seed
 
