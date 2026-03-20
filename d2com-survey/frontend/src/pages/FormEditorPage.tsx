@@ -156,8 +156,7 @@ export default function FormEditorPage() {
     );
   }
 
-  // Group by section
-  const sections = [...new Set(questions.map(q => q.section || 'Khác'))];
+
 
   return (
     <div className="max-w-3xl mx-auto space-y-4 animate-fadeIn">
