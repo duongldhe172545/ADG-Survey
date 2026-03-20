@@ -133,6 +133,19 @@ async def create_new_version(
 
     q_count = len(body.questions)
 
+    # 6. Create Google Sheet tab for new version (non-blocking)
+    try:
+        from backend.services.sheets_service import create_version_tab
+        q_ids = [q.q_id for q in body.questions]
+        create_version_tab(
+            form_type=new_form.type.value,
+            form_version=new_version,
+            q_ids=q_ids,
+        )
+    except Exception as e:
+        import logging
+        logging.warning(f"Sheet tab creation failed (non-blocking): {e}")
+
     return FormOut(
         id=new_form.id,
         name=new_form.name,

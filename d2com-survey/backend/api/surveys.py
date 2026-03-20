@@ -289,6 +289,7 @@ async def submit_survey(
 
             sheet_exported = append_survey_row(
                 form_type=form.type.value,
+                form_version=form.version,
                 customer_name=customer.name or customer.resp_id,
                 surveyor_name=current_user.email,
                 q_ids=q_ids,

@@ -69,14 +69,16 @@ def create_sheet_in_folder(
 
 def append_survey_row(
     form_type: str,
+    form_version: str,
     customer_name: str,
     surveyor_name: str,
     q_ids: list[str],
     answers: dict[str, str],
 ) -> bool:
     """
-    Append one row to the corresponding Google Sheet.
+    Append one row to the corresponding Google Sheet tab.
     form_type: 'dealer' or 'craft'
+    form_version: 'v1', 'v2', etc. — selects the correct tab
     q_ids: ordered list of question IDs (D01, D02, ...)
     answers: {q_id: answer_text}
     Returns True if success, False if skipped/failed.
@@ -96,7 +98,16 @@ def append_survey_row(
 
     try:
         spreadsheet = client.open_by_key(sheet_id)
-        worksheet = spreadsheet.sheet1
+
+        # Find the tab for this version (e.g. "Dealer_V2")
+        tab_name = f"{form_type.capitalize()}_V{form_version.replace('v', '').replace('V', '')}"
+        try:
+            worksheet = spreadsheet.worksheet(tab_name)
+        except gspread.exceptions.WorksheetNotFound:
+            # Fallback: try first sheet, or create the tab
+            logger.warning(f"Tab '{tab_name}' not found, using first sheet")
+            worksheet = spreadsheet.sheet1
+
         # Build row: [Timestamp, Customer, Surveyor, answer1, answer2, ...]
         vn_tz = timezone(timedelta(hours=7))
         now = datetime.now(vn_tz).strftime("%Y-%m-%d %H:%M:%S")
@@ -105,9 +116,62 @@ def append_survey_row(
             row.append(answers.get(qid, ""))
 
         worksheet.append_row(row, value_input_option="USER_ENTERED")
-        logger.info(f"Appended row to {form_type} sheet for '{customer_name}'")
+        logger.info(f"Appended row to {form_type}/{tab_name} for '{customer_name}'")
         return True
 
     except Exception as e:
         logger.error(f"Failed to append to sheet: {e}")
         return False
+
+
+def create_version_tab(
+    form_type: str,
+    form_version: str,
+    q_ids: list[str],
+) -> bool:
+    """
+    Create a new tab in the Google Sheet for a form version.
+    Tab name: e.g. "Dealer_V2"
+    Headers: Timestamp | Customer | Surveyor | D01 | D02 | ...
+    Returns True if success.
+    """
+    sheet_id = (
+        settings.GSHEET_RAW_DEALER_ID if form_type == "dealer"
+        else settings.GSHEET_RAW_CRAFT_ID
+    )
+
+    if not sheet_id:
+        logger.debug(f"GSHEET_RAW_{form_type.upper()}_ID not set, skipping tab creation")
+        return False
+
+    client = _get_client()
+    if not client:
+        return False
+
+    try:
+        spreadsheet = client.open_by_key(sheet_id)
+        v_num = form_version.replace("v", "").replace("V", "")
+        tab_name = f"{form_type.capitalize()}_V{v_num}"
+
+        # Check if tab already exists
+        existing = [ws.title for ws in spreadsheet.worksheets()]
+        if tab_name in existing:
+            logger.info(f"Tab '{tab_name}' already exists, skipping")
+            return True
+
+        # Create new tab
+        headers = ["Timestamp", "Customer", "Surveyor"] + q_ids
+        worksheet = spreadsheet.add_worksheet(
+            title=tab_name, rows=1000, cols=len(headers)
+        )
+        worksheet.update([headers], "A1")
+        worksheet.format("1", {"textFormat": {"bold": True}})
+        worksheet.freeze(rows=1)
+
+        logger.info(f"Created tab '{tab_name}' with {len(q_ids)} question columns")
+        return True
+
+    except Exception as e:
+        logger.error(f"Failed to create version tab: {e}")
+        return False
+
